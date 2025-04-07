@@ -12,7 +12,6 @@ from app.core.config import settings
 from app.api.dependencies import get_db
 from app.models import User
 from app.schemas import User as UserSchema, UserCreate, Token
-from app.services.nutrition import fetch_nutrition_data
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 

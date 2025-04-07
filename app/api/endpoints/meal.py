@@ -16,7 +16,6 @@ from app.api.dependencies import get_db
 from app.models import Meal, User, UserMealLog
 from app.schemas import (
     Meal as MealSchema,
-    User as UserSchema,
     MealResponse, MealType,
     MealComponent
     )
