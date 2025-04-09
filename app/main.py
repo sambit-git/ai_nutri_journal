@@ -14,6 +14,7 @@ from app.models.base import Base
 from app.api.endpoints.auth import router as auth_router
 from app.api.endpoints.meal import router as meals_router
 from app.api.endpoints.nutrition import router as nutrition_router
+from app.middlewares.logger import LoggingMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -48,6 +49,7 @@ def create_app():
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(LoggingMiddleware)
 
     # Mount static files
     if not os.path.exists(settings.STATIC_FILES_DIR):
