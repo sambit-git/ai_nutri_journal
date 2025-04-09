@@ -6,3 +6,4 @@ uvicorn
 pydantic-settings
 pydantic[email]
 python-multipart
+httpx

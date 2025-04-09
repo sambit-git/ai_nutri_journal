@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     # CORS
     ALLOWED_ORIGINS: list = ["*"]
 
+    # Third-party API Keys
+    USDA_API_KEY: str = "<use your API Key>"
+
     class Config:
         case_sensitive = True
         env_file = ".env"  # For production environment variables

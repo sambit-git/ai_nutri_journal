@@ -27,6 +27,7 @@ class Meal(MealBase):
 
 class MealComponent(BaseModel):
     food_id: int = Field(..., gt=0, description="ID of the food item")
+    food_name: str
     quantity: float = Field(..., gt=0, description="Quantity in grams")
     preparation_notes: Optional[str] = None
 
