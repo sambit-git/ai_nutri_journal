@@ -3,6 +3,8 @@ from pathlib import Path
 import os
 from functools import lru_cache
 
+from .food_classifier import FoodClassifier
+
 class Settings(BaseSettings):
     # General Flags
     DEBUG: bool = True
@@ -23,6 +25,11 @@ class Settings(BaseSettings):
 
     # CORS
     ALLOWED_ORIGINS: list = ["*"]
+
+    # ML Models
+    IMAGE_CLASSIFIER_MODEL: FoodClassifier = FoodClassifier(
+        "Your Path to ML model (.keras file)",
+        "Your test folder path against which the model is tested")
 
     # Third-party API Keys
     USDA_API_KEY: str = "<use your API Key>"

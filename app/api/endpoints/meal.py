@@ -8,12 +8,13 @@ from typing import List, Optional
 # Third Party
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 # Local Application
 from app.core.auth import get_current_active_user
 from app.core.config import settings
 from app.api.dependencies import get_db
-from app.models import Meal, User, UserMealLog
+from app.models import Meal, User, UserMealLog, FoodItem
 from app.schemas import (
     Meal as MealSchema,
     MealResponse, MealType,
@@ -21,36 +22,40 @@ from app.schemas import (
     )
 from app.services.nutrition import calculate_meal_nutrition
 from app.services.meals import format_meal_response
+from app.services.nutrition import fetch_and_store_nutrition_data
 
 router = APIRouter(prefix="/meals", tags=["Meals"])
 
 @router.post("", response_model=MealResponse)
 async def create_meal(
     meal_type: MealType = Form(...),
-    components: str = Form(...),  # JSON string of components
+    # components: str = Form(...),  # JSON string of components
     name: Optional[str] = Form(None),
-    image: Optional[UploadFile] = File(None),
+    image: UploadFile = File(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    # Parse components JSON
-    try:
-        component_data = json.loads(components)
-        validated_components = [MealComponent(**c) for c in component_data]
-    except (json.JSONDecodeError, ValueError) as e:
-        raise HTTPException(400, detail=f"Invalid components format: {str(e)}")
-
-    # Handle image upload (keep your existing logic)
     image_path = None
-    if image:
-        file_ext = os.path.splitext(image.filename)[1]
-        filename = f"{uuid.uuid4()}{file_ext}"
-        image_path = os.path.join(settings.STATIC_FILES_DIR, filename)
-        
-        with open(image_path, "wb") as buffer:
-            buffer.write(await image.read())
-        
-        image_path = f"/static/{filename}"
+    file_ext = os.path.splitext(image.filename)[1]
+    filename = f"{uuid.uuid4()}{file_ext}"
+    image_path = os.path.join(settings.STATIC_FILES_DIR, filename)
+    
+    with open(image_path, "wb") as buffer:
+        buffer.write(await image.read())
+    
+    detection_result = settings.IMAGE_CLASSIFIER_MODEL.predict(image_path)
+    detected_food = detection_result["class"]
+    
+    image_path = f"/static/{filename}"
+
+    food_item = db.query(FoodItem).filter(
+        func.lower(FoodItem.name) == func.lower(detected_food)
+    ).first()
+
+    if not food_item:
+        food_item = await fetch_and_store_nutrition_data(db, detected_food)
+        if not food_item:
+            print(f"Nutrition data not available for {detected_food}")
 
     # Create meal
     db_meal = Meal(
@@ -64,15 +69,13 @@ async def create_meal(
     db.commit()
     db.refresh(db_meal)
 
-    # Add meal components
-    for component in validated_components:
-        db_component = UserMealLog(
-            meal_id=db_meal.id,
-            food_id=component.food_id,
-            quantity=component.quantity,
-            preparation_notes=component.preparation_notes
-        )
-        db.add(db_component)
+    db_component = UserMealLog(
+        meal_id=db_meal.id,
+        food_id=food_item.id,
+        quantity=food_item.typical_serving_size,
+        preparation_notes=None,
+    )
+    db.add(db_component)
     
     db.commit()
     db.refresh(db_meal)
@@ -83,7 +86,13 @@ async def create_meal(
     return {
         **MealSchema.model_validate(db_meal).model_dump(),
         "nutrition": nutrition,
-        "components": validated_components
+        "components": [
+            {
+                "food_id": db_component.food_id,
+                "food_name": food_item.name,
+                "quantity": db_component.quantity
+            }
+        ]
     }
 
 

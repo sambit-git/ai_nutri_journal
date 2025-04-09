@@ -7,3 +7,5 @@ pydantic-settings
 pydantic[email]
 python-multipart
 httpx
+tensorflow
+pillow

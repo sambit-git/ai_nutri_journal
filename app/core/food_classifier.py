@@ -1,13 +1,13 @@
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras.preprocessing import image
-import numpy as np
 
 class FoodClassifier:
     """Equivalent to Django's service layer"""
-    def __init__(self, model_path: str):
+    def __init__(self, model_path: str, test_path: str):
         self.model = tf.keras.models.load_model(model_path)
         self.test_set = tf.keras.utils.image_dataset_from_directory(
-            "/home/sambit/Documents/projects/AI_Models/FoodRecognition/FoodJournalApp/notebooks/data/test",
+            test_path,
             labels="inferred",
             label_mode="categorical",
             class_names=None,
